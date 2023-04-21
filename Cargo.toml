@@ -1,0 +1,10 @@
+[package]
+name = "async-gui"
+version = "0.0.1"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+authors = ["John Nunley <jtnunley01@gmail.com>"]
+description = "A library for creating GUIs with async/await"
+
+[dependencies]
+async-executor = "1.5.1"
