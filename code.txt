@@ -1,0 +1,44 @@
+// What I want the end result to feel like.
+
+// Start running the GUI app.
+gui_tools::Display::new().run(async {
+    // Create a new window.
+    let window = gui_tools::Window::new().await;
+
+    // Use the window as an async drawing context.
+    let context = async_gui_native::Context::new(&window);
+
+    // Create three buttons.
+    let mut buttons = vec![];
+    for i in 0..3 {
+        let button = async_gui::Button::new(format!("Button {}", i));
+        buttons.push(button);
+    }
+
+    // Create a vertical stack.
+    let vstask = async_gui::Stack::new(async_gui::StackDirection::Vertical);
+    
+    // When a button is clicked, emit an event.
+    let exec = async_executor::LocalExecutor::new();
+    for button in &buttons {
+        exec.spawn(async move {
+            loop {
+                let _ = button.clicked().await;
+                println!("Button {i} clicked!");
+            }
+        }).detach();
+    }
+
+    // Run the buttons in the vstack draw context.
+    for button in &buttons {
+        exec.spawn(button.draw(&vstask.dcon())).detach();
+    }
+
+    // Run the vstack in the window draw context.
+    exec.spawn(vstask.draw(&context.dcon())).detach();
+
+    // Run the window.
+    window.close_requested().await;
+    gui_tools::exit().await
+});
+

@@ -8,3 +8,7 @@ description = "A library for creating GUIs with async/await"
 
 [dependencies]
 async-executor = "1.5.1"
+sunder = { git = "https://github.com/notgull/sunder.git", version = "0.1.0", default-features = false }
+
+[workspace]
+members = ["native"]

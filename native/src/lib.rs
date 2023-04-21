@@ -17,33 +17,6 @@ License along with `async-gui`. If not, see <https://www.gnu.org/licenses/>.
 
 */
 
-//! A retained mode GUI framework with emphasis on asynchronous code flow.
+use gui_tools::{Display, DisplayBuilder};
 
-use async_executor::LocalExecutor;
-
-use sunder::{Backend, Widget as SunWidget};
-
-use std::cell::RefCell;
-use std::future::Future;
-
-pub struct Framework {
-    /// A built-in executor for running tasks.
-    exec: LocalExecutor<'static>,
-
-    
-}
-
-/// The system to be drawn into.
-pub trait System {
-    type Backend: Backend;
-
-    /// Get the backend for drawing.
-    fn backend(&mut self) -> &mut Self::Backend;    
-}
-
-
-
-pub struct DrawContext<B> {
-    _p: &'a ()
-}
 

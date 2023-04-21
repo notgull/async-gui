@@ -1,0 +1,13 @@
+[package]
+name = "async-gui-native"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+authors = ["John Nunley <jtnunley01@gmail.com>"]
+description = "A library for creating GUIs with async/await"
+
+[dependencies]
+gui-tools = { git = "https://github.com/notgull/gui-tools.git", version = "0.0.1", default-features = false }
+
+[dev-dependencies]
+gui-tools = { git = "https://github.com/notgull/gui-tools.git", default-features = false, features = ["x11", "egl", "glx", "wgl"] }
