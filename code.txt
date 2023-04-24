@@ -8,15 +8,15 @@ gui_tools::Display::new().run(async {
     // Use the window as an async drawing context.
     let context = async_gui_native::Context::new(&window);
 
+    // Create a vertical stack.
+    let vstask = async_gui::Stack::new(context, async_gui::StackDirection::Vertical);
+
     // Create three buttons.
     let mut buttons = vec![];
     for i in 0..3 {
-        let button = async_gui::Button::new(format!("Button {}", i));
+        let button = async_gui::Button::new(&vstask, format!("Button {}", i));
         buttons.push(button);
     }
-
-    // Create a vertical stack.
-    let vstask = async_gui::Stack::new(async_gui::StackDirection::Vertical);
     
     // When a button is clicked, emit an event.
     let exec = async_executor::LocalExecutor::new();
@@ -31,11 +31,11 @@ gui_tools::Display::new().run(async {
 
     // Run the buttons in the vstack draw context.
     for button in &buttons {
-        exec.spawn(button.draw(&vstask.dcon())).detach();
+        exec.spawn(button.draw()).detach();
     }
 
     // Run the vstack in the window draw context.
-    exec.spawn(vstask.draw(&context.dcon())).detach();
+    exec.spawn(vstask.draw()).detach();
 
     // Run the window.
     window.close_requested().await;

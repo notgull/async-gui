@@ -19,31 +19,47 @@ License along with `async-gui`. If not, see <https://www.gnu.org/licenses/>.
 
 //! A retained mode GUI framework with emphasis on asynchronous code flow.
 
-use async_executor::LocalExecutor;
-
+use futures_lite::prelude::*;
 use sunder::{Backend, Widget as SunWidget};
 
 use std::cell::RefCell;
 use std::future::Future;
 
-pub struct Framework {
-    /// A built-in executor for running tasks.
-    exec: LocalExecutor<'static>,
-
-    
-}
-
 /// The system to be drawn into.
 pub trait System {
+    /// The backend used to draw widgets.
     type Backend: Backend;
 
+    /// A type for listening to events.
+    type Listener<T>: Listener<T>;
+
     /// Get the backend for drawing.
-    fn backend(&mut self) -> &mut Self::Backend;    
+    fn with_backend<R>(&self, f: impl FnOnce(&mut Self::Backend, DrawParameters) -> R) -> R;
 }
 
-
-
-pub struct DrawContext<B> {
-    _p: &'a ()
+/// Listener for new events.
+pub trait Listener<T> {
+    type Stream<'a>: Stream<Item = T> + 'a;
+    fn events<'a>(&'a mut self) -> Self::Stream<'a>;
 }
 
+/// Drawing context.
+pub trait DrawContext {
+    type Backend: Backend;
+    type Notify: Future<Output = ()>;
+
+    fn wait(&self) -> Self::Notify;
+    fn draw(
+        &self,
+        f: impl FnOnce(
+            &mut Self::Backend,
+            DrawParameters,
+        ) -> Result<<Self::Backend>::Output, <Self::Backend>::Error>,
+    );
+}
+
+pub trait Widget<B: Backend> {
+    fn render(&mut self, backend: &mut B, params: DrawParameters) -> B::Output;
+}
+
+pub struct DrawParameters {}

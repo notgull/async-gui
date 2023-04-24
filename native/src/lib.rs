@@ -18,5 +18,3 @@ License along with `async-gui`. If not, see <https://www.gnu.org/licenses/>.
 */
 
 use gui_tools::{Display, DisplayBuilder};
-
-
