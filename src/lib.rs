@@ -20,10 +20,12 @@ License along with `async-gui`. If not, see <https://www.gnu.org/licenses/>.
 //! A retained mode GUI framework with emphasis on asynchronous code flow.
 
 use futures_lite::prelude::*;
-use sunder::{Backend, Widget as SunWidget};
+use sunder::{Backend, RenderedWidget, Widget as SunWidget};
 
 use std::cell::RefCell;
 use std::future::Future;
+
+type BackResult<B> = Result<<B as Backend>::Output, <B as Backend>::Error>;
 
 /// The system to be drawn into.
 pub trait System {
@@ -33,33 +35,83 @@ pub trait System {
     /// A type for listening to events.
     type Listener<T>: Listener<T>;
 
-    /// Get the backend for drawing.
-    fn with_backend<R>(&self, f: impl FnOnce(&mut Self::Backend, DrawParameters) -> R) -> R;
+    /// The future for waiting until a redraw is requested of a component.
+    type RedrawRequested<'a>: Future<Output = ()> + 'a
+    where
+        Self: 'a;
+
+    /// Draw a widget.
+    fn draw(
+        &self,
+        f: impl FnOnce(&mut Self::Backend, DrawParameters) -> BackResult<Self::Backend>,
+    ) -> (BackResult<Self::Backend>, Self::RedrawRequested<'_>);
+}
+
+impl<'x, Sys: System + ?Sized> System for &'x Sys {
+    type Backend = Sys::Backend;
+    type Listener<T> = Sys::Listener<T>;
+    type RedrawRequested<'a> = Sys::RedrawRequested<'a> where 'x: 'a;
+
+    fn draw(
+        &self,
+        f: impl FnOnce(&mut Self::Backend, DrawParameters) -> BackResult<Self::Backend>,
+    ) -> (BackResult<Self::Backend>, Self::RedrawRequested<'_>) {
+        (**self).draw(f)
+    }
 }
 
 /// Listener for new events.
 pub trait Listener<T> {
-    type Stream<'a>: Stream<Item = T> + 'a;
+    type Stream<'a>: Stream<Item = T> + 'a
+    where
+        Self: 'a;
     fn events<'a>(&'a mut self) -> Self::Stream<'a>;
 }
 
-/// Drawing context.
-pub trait DrawContext {
-    type Backend: Backend;
-    type Notify: Future<Output = ()>;
-
-    fn wait(&self) -> Self::Notify;
-    fn draw(
-        &self,
-        f: impl FnOnce(
-            &mut Self::Backend,
-            DrawParameters,
-        ) -> Result<<Self::Backend>::Output, <Self::Backend>::Error>,
-    );
-}
-
-pub trait Widget<B: Backend> {
-    fn render(&mut self, backend: &mut B, params: DrawParameters) -> B::Output;
-}
-
 pub struct DrawParameters {}
+
+/// Wraps a `sunder` widget.
+pub struct Widget<'a, Sys: System + ?Sized, S: RenderedWidget<Sys::Backend>> {
+    /// The underlying widget.
+    widget: S,
+
+    /// The widget's immediate state.
+    state: S::Immediate<'a>,
+
+    /// Cache of widget-specific data.
+    cache: RefCell<S::Cache>,
+
+    /// The system to be drawn into.
+    system: Sys,
+}
+
+impl<'a, Sys: System + ?Sized, S: RenderedWidget<Sys::Backend>> Widget<'a, Sys, S> {
+    /// Create a new widget.
+    pub fn new(system: Sys, widget: S) -> Self
+    where
+        Sys: Sized,
+    {
+        Self {
+            state: <S::Immediate<'a>>::default(),
+            cache: RefCell::new(<S::Cache>::default()),
+            widget,
+            system,
+        }
+    }
+
+    pub async fn draw<'x>(&'x self) -> ! {
+        loop {
+            // Draw the widget.
+            let (res, wait) = self.system.draw(|backend, _| {
+                self.widget
+                    .render(&self.state, &mut self.cache.borrow_mut(), backend)
+            });
+
+            // TODO: Handle error
+            let _ = res;
+
+            // Wait for the next redraw.
+            wait.await;
+        }
+    }
+}
