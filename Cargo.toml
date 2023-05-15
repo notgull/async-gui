@@ -9,7 +9,7 @@ description = "A library for creating GUIs with async/await"
 [dependencies]
 async-executor = "1.5.1"
 futures-lite = "1.13.0"
-sunder = { version = "0.1.0", default-features = false, path = "../sunder" }
+sunder = { version = "0.1.0", default-features = false, path = "./sunder" }
 
 [workspace]
-members = ["native"]
+members = ["native", "sunder", "gui-tools"]
